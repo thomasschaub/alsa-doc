@@ -1,23 +1,37 @@
+#include <array>
+#include <chrono>
 #include <iostream>
+#include <sstream>
+#include <utility>
+
+#include <boost/lexical_cast.hpp>
 
 #include <dlfcn.h>
 
 #include <alsa/asoundlib.h>
 
+#include "trace_event_writer.h"
+
+// Tracing
+
+static Tracer tracer(1024);
+
 namespace fns
 {
 
-// Interface description
+// ALSA Interface description
 
 struct snd_pcm_open
 {
   const char* name = "snd_pcm_open";
+  const std::vector<const char*> args = {"pcm", "name", "stream", "mode"};
   using type = int(*)(snd_pcm_t **pcm, const char *name, snd_pcm_stream_t stream, int mode);
 };
 
 struct snd_pcm_writei
 {
   const char* name = "snd_pcm_writei";
+  const std::vector<const char*> args = {"pcm", "buffer", "size"};
   using type = snd_pcm_sframes_t(*)(snd_pcm_t *pcm, const void *buffer, snd_pcm_uframes_t size);
 };
 
@@ -48,11 +62,37 @@ static typename Fn::type load()
   return addr;
 }
 
+template <typename... Args>
+struct ArgCollector
+{
+  template <size_t... Is>
+  std::vector<std::pair<std::string, std::string>> collect(std::index_sequence<Is...>, const char* const* names, Args... args)
+  {
+    return {std::make_pair(names[Is], boost::lexical_cast<std::string>(args))...};
+  }
+};
+
+
+template <typename... Args>
+std::vector<std::pair<std::string, std::string>> collectArgs(const char* const* names, Args... args)
+{
+  ArgCollector<Args...> argCollector;
+  return argCollector.collect(std::index_sequence_for<Args...>(), names, args...);
+}
+
 template <typename Fn, typename... Args>
 auto call(Args... args)
 {
-  auto fn = load<Fn>();
-  return fn(args...);
+  Fn fn;
+  auto f = load<Fn>();
+
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  const auto ret = f(std::forward<Args>(args)...);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+
+  tracer.trace(fn.name, t0, t1, collectArgs(fn.args.data(), args...));
+
+  return ret;
 }
 
 }
@@ -65,13 +105,11 @@ extern "C"
 int snd_pcm_open(snd_pcm_t **pcm, const char *name, 
 		 snd_pcm_stream_t stream, int mode)
 {
-  std::cout << "snd_pcm_open called" << std::endl;
   return fns::call<fns::snd_pcm_open>(pcm, name, stream, mode);
 }
 
 snd_pcm_sframes_t snd_pcm_writei(snd_pcm_t *pcm, const void *buffer, snd_pcm_uframes_t size)
 {
-  std::cout << "snd_pcm_writei called" << std::endl;
   return fns::call<fns::snd_pcm_writei>(pcm, buffer, size);
 }
 
