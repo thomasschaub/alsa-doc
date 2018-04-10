@@ -41,13 +41,28 @@ static typename Fn::type load()
   return addr;
 }
 
+template <typename T>
+std::string to_string(T&& t)
+{
+  return boost::lexical_cast<std::string>(std::forward<T>(t));
+}
+
+std::string to_string(const char* cs)
+{
+  if (cs == nullptr)
+  {
+    return "<nullptr>";
+  }
+  return cs;
+}
+
 template <typename... Args>
 struct ArgCollector
 {
   template <size_t... Is>
   std::vector<std::pair<std::string, std::string>> collect(std::index_sequence<Is...>, const char* const* names, Args... args)
   {
-    return {std::make_pair(names[Is], boost::lexical_cast<std::string>(args))...};
+    return {std::make_pair(names[Is], to_string(args))...};
   }
 };
 
