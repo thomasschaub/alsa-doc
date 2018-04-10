@@ -33,7 +33,7 @@ inline std::ostream& operator<<(std::ostream& os, const CompleteEvent& e)
     "\"name\":\"" << e.name << "\","
     "\"cat\":\"\","
     "\"ph\":\"X\","
-    "\"ts\":" << e.ts.time_since_epoch().count() << ","
+    "\"ts\":" << std::chrono::duration_cast<std::chrono::microseconds>(e.ts.time_since_epoch()).count() << ","
     "\"pid\":1,"
     "\"tid\":" << e.tid << ","
     "\"args\":{";
@@ -51,7 +51,7 @@ inline std::ostream& operator<<(std::ostream& os, const CompleteEvent& e)
     }
   }
   os << "},"
-    "\"dur\":" << e.dur.count() << ""
+    "\"dur\":" << std::chrono::duration_cast<std::chrono::microseconds>(e.dur).count() << ""
     "}";
 
   return os;
