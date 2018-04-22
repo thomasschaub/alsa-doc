@@ -19,24 +19,7 @@ extern "C" const char * snd_asoundlib_version()
   return fns::call<fns::snd_asoundlib_version>();
 }
 
-namespace fns
-{
-
-using snd_dlopen_arg0_t = const char *;
-using snd_dlopen_arg1_t = int;
-struct snd_dlopen
-{
-  const char* name = "snd_dlopen";
-  const std::vector<const char*> args = {"file", "mode"};
-  using type = void *(*)(const char *, int);
-};
-
-}
-
-extern "C" void * snd_dlopen(fns::snd_dlopen_arg0_t file, fns::snd_dlopen_arg1_t mode)
-{
-  return fns::call<fns::snd_dlopen>(file, mode);
-}
+// Skipping snd_dlopen
 
 namespace fns
 {

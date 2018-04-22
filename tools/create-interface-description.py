@@ -25,6 +25,11 @@ def render_decl(function_decl):
     if not function_name.startswith("snd_"):
         return ""
 
+    # snd_dlopen is used as a reference point so ALSA can find it's own module
+    # and load internal symbols. Defining it would confuse ALSA.
+    if function_name == "snd_dlopen":
+        return "// Skipping snd_dlopen\n\n".format(function_name)
+
     if function_decl.type.is_function_variadic():
         return "// Skipping {} because it is variadic\n\n".format(function_name)
 
